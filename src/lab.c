@@ -10,8 +10,6 @@
 #include <readline/history.h>
 #include "lab.h"
 
-struct shell sh;
-
 // Displays the prompt
 char *get_prompt(const char *env) {
   char *prompt = getenv(env);
@@ -48,6 +46,13 @@ char **cmd_parse(char const *line){
 
 void cmd_free(char ** line){
 
+  if(!line){
+    return;
+  }
+  for(size_t i = 0; line[i]; i++){
+    free(line[i]);
+  }
+  free(line);
 }
 
 char *trim_white(char *line){
