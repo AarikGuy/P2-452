@@ -8,12 +8,13 @@
 #include <errno.h>
 #include <readline/readline.h>
 #include <readline/history.h>
+#include <signal.h>
 #include "lab.h"
 
 // Displays the prompt
 char *get_prompt(const char *env) {
   char *prompt = getenv(env);
-  return prompt ? prompt : "myshell> ";
+    return prompt ? strdup(prompt) : strdup("shell>");
 }
 
 int change_dir(char **dir){
@@ -40,35 +41,111 @@ int change_dir(char **dir){
   return 0;
 }
 
+//Parses a command string
 char **cmd_parse(char const *line){
+  if (!line || *line == '\0') return NULL;
 
+    long arg_max = sysconf(_SC_ARG_MAX);
+    char **args = malloc(sizeof(char *) * (arg_max + 1));
+    if (!args) {
+        perror("malloc failed");
+        return NULL;
+    }
+
+    char *copy = strdup(line);
+    if (!copy) {
+        perror("strdup failed");
+        free(args);
+        return NULL;
+    }
+
+    int i = 0;
+    char *token = strtok(copy, " ");
+    while (token && i < arg_max) {
+      args[i] = strdup(token);
+       if (!args[i]) {
+            perror("strdup failed");
+            for (int j = 0; j < i; j++) free(args[j]);  
+            free(copy);
+            free(args);
+            return NULL;
+        }
+        token = strtok(NULL, " ");
+        i++;
+    }
+
+    args[i] = NULL;
+    free(copy); 
+    return args;
 }
 
 void cmd_free(char ** line){
-
-  if(!line){
+  if (!line){
     return;
+  } 
+  for (size_t i = 0; line[i] != NULL; i++) {
+      if (line[i] != NULL) {
+          // printf("Freeing line[%zu]: %p\n", i, (void*)line[i]); //Debug statement
+          free(line[i]);
+      }
   }
-  for(size_t i = 0; line[i]; i++){
-    free(line[i]);
-  }
+
+  // printf("Freeing line array itself: %p\n", (void*)line); // Debug statement
   free(line);
 }
 
 char *trim_white(char *line){
+  if (!line) return NULL;
 
+    while (isspace(*line)) line++;
+    char *end = line + strlen(line) - 1;
+    while (end > line && isspace(*end)) *end-- = '\0';
+
+    return line;
 }
 
 bool do_builtin(struct shell *sh, char **argv){
+  if (!argv || !argv[0]) return false;
 
+    if (strcmp(argv[0], "exit") == 0) {
+        sh_destroy(sh);
+        exit(0);
+    } else if (strcmp(argv[0], "cd") == 0) {
+        return change_dir(argv) == 0;
+    } else if (strcmp(argv[0], "history") == 0) {
+        HIST_ENTRY **history = history_list();
+        if (history) {
+            for (int i = 0; history[i]; i++) {
+                printf("%d: %s\n", i + history_base, history[i]->line);
+            }
+        }
+        return true;
+    }
+    return false;
 }
 
 void sh_init(struct shell *sh){
+  sh->prompt = get_prompt("MY_PROMPT");
+    sh->shell_terminal = STDIN_FILENO;
+    sh->shell_pgid = getpid();
 
+    // Puts the shell in its own process group
+    setpgid(sh->shell_pgid, sh->shell_pgid);
+    tcsetpgrp(sh->shell_terminal, sh->shell_pgid);
+
+    // Ignores the signals
+    signal(SIGINT, SIG_IGN);
+    signal(SIGQUIT, SIG_IGN);
+    signal(SIGTSTP, SIG_IGN);
+    signal(SIGTTIN, SIG_IGN);
+    signal(SIGTTOU, SIG_IGN);
 }
 
 void sh_destroy(struct shell *sh){
-  free(sh->prompt);
+  if (sh->prompt) {
+    free(sh->prompt);
+    sh->prompt = NULL;
+}
 }
 
 //Parses Command line args

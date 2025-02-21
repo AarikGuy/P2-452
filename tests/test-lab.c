@@ -30,6 +30,8 @@ TEST_ASSERT_FALSE(actual[2]);
 free(expected[0]);
 free(expected[1]);
 free(expected);
+cmd_free(actual);
+free(stng);
 }
 void test_cmd_parse(void)
 {
@@ -102,7 +104,7 @@ void test_get_prompt_default(void)
 {
 char *prompt = get_prompt("MY_PROMPT");
 TEST_ASSERT_EQUAL_STRING(prompt, "shell>");
-free(prompt);
+// free(prompt);
 }
 void test_get_prompt_custom(void)
 {
