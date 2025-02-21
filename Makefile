@@ -28,8 +28,16 @@ LDFLAGS ?= -pthread -lreadline
 #Default to building without debug flags
 all: $(TARGET_EXEC) $(TARGET_TEST)
 
-#Build with debug flags and address sanitizer
-#https://www.gnu.org/software/make/manual/make.html#Target_002dspecific
+# Shows EXE source files (for debugging)
+show-exe-sources:
+	@echo $(EXE_SRCS)
+
+# Shows object files (for debugging)
+show-obj-files:
+	@echo $(EXE_OBJS)
+
+# Build with debug flags and address sanitizer
+# https://www.gnu.org/software/make/manual/make.html#Target_002dspecific
 debug: CFLAGS += $(SANATIZE)
 debug: CFLAGS += $(DEBUG)
 debug: $(TARGET_EXEC) $(TARGET_TEST)
@@ -56,6 +64,5 @@ clean:
 install-deps:
 	sudo apt-get update -y
 	sudo apt-get install -y libio-socket-ssl-perl libmime-tools-perl
-
 
 -include $(DEPS) $(TEST_DEPS) $(EXE_DEPS)

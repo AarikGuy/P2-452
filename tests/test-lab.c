@@ -3,10 +3,10 @@
 #include "../src/lab.h"
 
 void setUp(void) {
-// set stuff up here
+    setenv("MY_PROMPT", "foo>", 1);
 }
 void tearDown(void) {
-// clean stuff up here
+    unsetenv("MY_PROMPT");
 }
 void test_cmd_parse2(void)
 {
@@ -102,6 +102,7 @@ free(line);
 }
 void test_get_prompt_default(void)
 {
+unsetenv("MY_PROMPT");
 char *prompt = get_prompt("MY_PROMPT");
 TEST_ASSERT_EQUAL_STRING(prompt, "shell>");
 // free(prompt);
@@ -142,6 +143,96 @@ free(line);
 free(actual);
 cmd_free(cmd);
 }
+
+//This tests to ensure the cmd_parse function can handle en empty input
+void test_cmd_parse_empty(void)
+{
+    char **rval = cmd_parse("");
+    TEST_ASSERT_NULL(rval);
+    cmd_free(rval);
+}
+
+// This checks if the command correctly parses a single arg
+void test_cmd_parse_single(void)
+{
+    char **rval = cmd_parse("ls");
+    TEST_ASSERT_EQUAL_STRING("ls", rval[0]);
+    TEST_ASSERT_NULL(rval[1]);
+    cmd_free(rval);
+}
+
+// This checks if the command can correctly parse multiple args
+void test_cmd_parse_multiple(void)
+{
+    char **rval = cmd_parse("ls -l -a -h");
+    TEST_ASSERT_EQUAL_STRING("ls", rval[0]);
+    TEST_ASSERT_EQUAL_STRING("-l", rval[1]);
+    TEST_ASSERT_EQUAL_STRING("-a", rval[2]);
+    TEST_ASSERT_EQUAL_STRING("-h", rval[3]);
+    TEST_ASSERT_NULL(rval[4]);
+    cmd_free(rval);
+}
+
+//This checks that trim_white works when there's only whitespace in the string
+void test_trim_white_only_whitespace(void)
+{
+    char *line = (char*)calloc(10, sizeof(char));
+    strncpy(line, "     ", 10);
+    char *rval = trim_white(line);
+    TEST_ASSERT_EQUAL_STRING("", rval);
+    free(line);
+}
+
+//This tests that when the env variable is not set the default prompt is used
+void test_get_prompt_default_empty_env(void)
+{
+    unsetenv("MY_PROMPT");
+    char *prompt = get_prompt("MY_PROMPT");
+    TEST_ASSERT_EQUAL_STRING(prompt, "shell>");
+    free(prompt);
+}
+
+// This makes sure custom prompts work
+void test_get_prompt_custom_env(void)
+{
+    const char* prmpt = "MY_PROMPT";
+    setenv(prmpt, "foo>", 1);
+    char *prompt = get_prompt(prmpt);
+    TEST_ASSERT_EQUAL_STRING(prompt, "foo>");
+    free(prompt);
+    unsetenv(prmpt);
+}
+
+//This checks to see if change_dir handles an invalid dir
+void test_ch_dir_invalid(void)
+{
+    char *line = (char*)calloc(30, sizeof(char));
+    strncpy(line, "cd /cheeseAndCrackers", 30);
+    char **cmd = cmd_parse(line);
+    int result = change_dir(cmd);
+    TEST_ASSERT_EQUAL_INT(-1, result);  
+    free(line);
+    cmd_free(cmd);
+}
+
+// Testing cd with no arg
+void test_ch_dir_empty(void)
+{
+    char *line = (char*)calloc(10, sizeof(char));
+    strncpy(line, "cd", 10); 
+    char **cmd = cmd_parse(line);
+    char *expected = getenv("HOME");
+    int result = change_dir(cmd);
+    TEST_ASSERT_EQUAL_INT(0, result);  
+    char *actual = getcwd(NULL, 0);
+    TEST_ASSERT_EQUAL_STRING(expected, actual);
+    free(line);
+    free(actual);
+    cmd_free(cmd);
+}
+
+
+
 int main(void) {
 UNITY_BEGIN();
 RUN_TEST(test_cmd_parse);
@@ -156,5 +247,13 @@ RUN_TEST(test_get_prompt_default);
 RUN_TEST(test_get_prompt_custom);
 RUN_TEST(test_ch_dir_home);
 RUN_TEST(test_ch_dir_root);
+RUN_TEST(test_cmd_parse_empty);
+RUN_TEST(test_cmd_parse_single);
+RUN_TEST(test_cmd_parse_multiple);
+RUN_TEST(test_trim_white_only_whitespace);
+RUN_TEST(test_get_prompt_default_empty_env);
+RUN_TEST(test_get_prompt_custom_env);
+RUN_TEST(test_ch_dir_invalid);
+RUN_TEST(test_ch_dir_empty);
 return UNITY_END();
 }

@@ -17,6 +17,7 @@ char *get_prompt(const char *env) {
     return prompt ? strdup(prompt) : strdup("shell>");
 }
 
+// Changes dir
 int change_dir(char **dir){
   const char *target = dir[1];
 
@@ -79,6 +80,7 @@ char **cmd_parse(char const *line){
     return args;
 }
 
+// Frees the memory allocated for an array of strings and the array itself
 void cmd_free(char ** line){
   if (!line){
     return;
@@ -94,6 +96,7 @@ void cmd_free(char ** line){
   free(line);
 }
 
+//Trims out any unnecessary white spaces
 char *trim_white(char *line){
   if (!line) return NULL;
 
@@ -104,6 +107,7 @@ char *trim_white(char *line){
     return line;
 }
 
+// Executes shell commands
 bool do_builtin(struct shell *sh, char **argv){
   if (!argv || !argv[0]) return false;
 
@@ -124,28 +128,30 @@ bool do_builtin(struct shell *sh, char **argv){
     return false;
 }
 
+// Initializes the shell
 void sh_init(struct shell *sh){
   sh->prompt = get_prompt("MY_PROMPT");
-    sh->shell_terminal = STDIN_FILENO;
-    sh->shell_pgid = getpid();
+  sh->shell_terminal = STDIN_FILENO;
+  sh->shell_pgid = getpid();
 
-    // Puts the shell in its own process group
-    setpgid(sh->shell_pgid, sh->shell_pgid);
-    tcsetpgrp(sh->shell_terminal, sh->shell_pgid);
+  // Puts the shell in its own process group
+  setpgid(sh->shell_pgid, sh->shell_pgid);
+  tcsetpgrp(sh->shell_terminal, sh->shell_pgid);
 
-    // Ignores the signals
-    signal(SIGINT, SIG_IGN);
-    signal(SIGQUIT, SIG_IGN);
-    signal(SIGTSTP, SIG_IGN);
-    signal(SIGTTIN, SIG_IGN);
-    signal(SIGTTOU, SIG_IGN);
+  // Ignores the signals
+  signal(SIGINT, SIG_IGN);
+  signal(SIGQUIT, SIG_IGN);
+  signal(SIGTSTP, SIG_IGN);
+  signal(SIGTTIN, SIG_IGN);
+  signal(SIGTTOU, SIG_IGN);
 }
 
+// Destroys the shell and frees accordingly
 void sh_destroy(struct shell *sh){
   if (sh->prompt) {
     free(sh->prompt);
     sh->prompt = NULL;
-}
+  }
 }
 
 //Parses Command line args
