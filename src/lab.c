@@ -14,16 +14,17 @@
 // Displays the prompt
 char *get_prompt(const char *env) {
   char *prompt = getenv(env);
-    return prompt ? strdup(prompt) : strdup("shell>");
+    return prompt ? strdup(prompt) : strdup("shell>"); // This is the default if the env variable isnt set
 }
 
 // Changes dir
 int change_dir(char **dir){
-  const char *target = dir[1];
+  const char *target = dir[1]; //gets the target directory from the command args
 
+  // If no directory is provided then the default will be the HOME dir
   if(target == NULL){
     target = getenv("HOME");
-    if(!target){
+    if(!target){ // if HOME is not set then get it from the passwd struct 
       struct passwd *pw = getpwuid(getuid());
       if(pw){
         target = pw->pw_dir;
@@ -34,9 +35,10 @@ int change_dir(char **dir){
     }
   }
 
+// Attempt to change dir, prints an error if fail
   if(chdir(target) != 0){
     perror("cd");
-    return -1;
+    return -1; //exits
   }
 
   return 0;
@@ -46,14 +48,14 @@ int change_dir(char **dir){
 char **cmd_parse(char const *line){
   if (!line || *line == '\0') return NULL;
 
-    long arg_max = sysconf(_SC_ARG_MAX);
-    char **args = malloc(sizeof(char *) * (arg_max + 1));
+    long arg_max = sysconf(_SC_ARG_MAX); // gets system max arg count
+    char **args = malloc(sizeof(char *) * (arg_max + 1)); 
     if (!args) {
         perror("malloc failed");
         return NULL;
     }
 
-    char *copy = strdup(line);
+    char *copy = strdup(line); // duplicate input string for tokenization
     if (!copy) {
         perror("strdup failed");
         free(args);
@@ -61,17 +63,17 @@ char **cmd_parse(char const *line){
     }
 
     int i = 0;
-    char *token = strtok(copy, " ");
+    char *token = strtok(copy, " "); // tokenized the input string by spaces
     while (token && i < arg_max) {
-      args[i] = strdup(token);
-       if (!args[i]) {
+      args[i] = strdup(token); //stores each token in the args array
+       if (!args[i]) { // this handles memory allocation failure
             perror("strdup failed");
             for (int j = 0; j < i; j++) free(args[j]);  
             free(copy);
             free(args);
             return NULL;
         }
-        token = strtok(NULL, " ");
+        token = strtok(NULL, " "); // Gets next token
         i++;
     }
 
@@ -100,9 +102,9 @@ void cmd_free(char ** line){
 char *trim_white(char *line){
   if (!line) return NULL;
 
-    while (isspace(*line)) line++;
+    while (isspace(*line)) line++; // moves pointer forward past leading whitespace
     char *end = line + strlen(line) - 1;
-    while (end > line && isspace(*end)) *end-- = '\0';
+    while (end > line && isspace(*end)) *end-- = '\0'; // This helps remove the trailing whitespace
 
     return line;
 }
@@ -162,7 +164,7 @@ void parse_args(int argc, char **argv){
           case 'v':
               printf("Shell Version: %d.%d\n", lab_VERSION_MAJOR, lab_VERSION_MINOR);
               exit(0);
-          default:
+          default: // handles invalid args
               fprintf(stderr, "Usage: %s [-v]\n", argv[0]);
               exit(EXIT_FAILURE);
       }
